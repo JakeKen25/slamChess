@@ -2,7 +2,7 @@
 
 This guide walks you through deploying **Slam Chess** to your own AWS account using the repository’s CDK infrastructure.
 
-It is written for first-time AWS users and assumes you are running commands from the repository root.
+It is written for first-time AWS users and now includes a full **AWS CloudShell** path, so you can deploy without using your own local machine for AWS tooling.
 
 ---
 
@@ -19,23 +19,125 @@ After deployment, you get an API endpoint URL you can use from the included web 
 
 ---
 
-## 2) Prerequisites
+## 2) Two setup options (choose one)
+
+You can follow either setup path:
+
+1. **Option A: AWS CloudShell (recommended for beginners)**
+   - Browser-based shell in AWS Console.
+   - AWS credentials are already tied to your signed-in IAM identity.
+   - No local AWS CLI setup required.
+2. **Option B: Local machine**
+   - Run all commands on your computer.
+   - Requires local AWS CLI configuration.
+
+> Important: You do **not** need to change any source code in this repo to use CloudShell.
+
+---
+
+## 3) Prerequisites
 
 Before you start, make sure you have:
 
 1. An **AWS account** with access to create IAM, Lambda, API Gateway, DynamoDB, and CloudFormation resources.
-2. A local machine with:
-   - **Node.js 20+**
-   - **npm**
-   - **Git**
-3. The **AWS CLI v2** installed and configured.
-4. Permissions to run **CDK bootstrap/deploy** in your AWS account.
+2. Access to one of:
+   - **AWS CloudShell** in your target AWS region, or
+   - A local machine with **Node.js 20+**, **npm**, and **Git**.
+3. Permissions to run **CDK bootstrap/deploy** in your AWS account.
+
+If using local machine only, also install and configure **AWS CLI v2**.
 
 > Tip: Use a sandbox AWS account while learning to avoid accidental production costs.
 
 ---
 
-## 3) Clone and install the project
+## 4) Option A: CloudShell-first workflow
+
+### 4.1 Open CloudShell
+
+1. Sign in to AWS Console.
+2. Switch to the region where you want to deploy (for example `us-east-1`).
+3. Open **CloudShell** from the console toolbar.
+
+### 4.2 Verify basic tools in CloudShell
+
+```bash
+aws --version
+node --version
+npm --version
+git --version
+```
+
+If Node.js is missing or outdated in your CloudShell environment, install a recent Node version with your preferred method (for example `nvm`) before continuing.
+
+### 4.3 Clone and install
+
+```bash
+git clone <your-repo-url>
+cd slamChess
+npm install
+```
+
+### 4.4 Confirm identity (CloudShell uses your console identity)
+
+```bash
+aws sts get-caller-identity
+```
+
+### 4.5 Bootstrap CDK (one-time per account/region)
+
+```bash
+npx cdk bootstrap
+```
+
+### 4.6 Build and deploy
+
+```bash
+npm run build
+npm run cdk:deploy
+```
+
+When deployment completes, copy the `ApiEndpoint` output.
+
+### 4.7 Verify API from CloudShell
+
+```bash
+export API_BASE_URL="https://<your-api-id>.execute-api.<region>.amazonaws.com"
+
+curl -s -X POST "$API_BASE_URL/games" -H "content-type: application/json"
+```
+
+Then test additional endpoints (replace `<gameId>`):
+
+```bash
+curl -s "$API_BASE_URL/games/<gameId>"
+curl -s -X POST "$API_BASE_URL/games/<gameId>/moves" \
+  -H "content-type: application/json" \
+  -d '{"from":"e2","to":"e4"}'
+curl -s "$API_BASE_URL/games/<gameId>/history"
+curl -s "$API_BASE_URL/games/<gameId>/legal-moves"
+```
+
+### 4.8 Use the frontend
+
+The frontend can be run:
+
+- on your local machine (`npm run web:dev`), pointing to the deployed AWS API endpoint, or
+- in any environment where you can run Vite and access the browser URL.
+
+Local example:
+
+```bash
+VITE_API_BASE_URL="https://<your-api-id>.execute-api.<region>.amazonaws.com" npm run web:dev
+```
+
+---
+
+## 5) Option B: Local-machine workflow
+
+If you prefer local setup, use this sequence.
+
+### 5.1 Clone and install
 
 ```bash
 git clone <your-repo-url>
@@ -50,9 +152,7 @@ npm run build
 npm test
 ```
 
----
-
-## 4) Configure AWS credentials (AWS CLI)
+### 5.2 Configure AWS credentials (AWS CLI)
 
 If this is your first setup:
 
@@ -73,59 +173,24 @@ Validate identity:
 aws sts get-caller-identity
 ```
 
-If this command succeeds, your credentials are working.
-
----
-
-## 5) Bootstrap CDK (one-time per account/region)
-
-From the repo root:
+### 5.3 Bootstrap CDK
 
 ```bash
 npx cdk bootstrap
 ```
 
-Or with npm script support for synth/deploy workflow:
-
-```bash
-npm run cdk:synth
-```
-
-If bootstrap fails with permission issues, your AWS user/role may be missing CloudFormation or IAM permissions.
-
----
-
-## 6) Build TypeScript output
-
-The CDK stack expects compiled assets in `dist/`.
+### 5.4 Build and deploy
 
 ```bash
 npm run build
-```
-
-This compiles source used by Lambda and infrastructure entrypoints.
-
----
-
-## 7) Deploy the AWS stack
-
-Deploy with:
-
-```bash
 npm run cdk:deploy
 ```
 
-During deploy, CDK may ask for confirmation. Approve when prompted.
-
-On success, note the stack output:
-
-- `ApiEndpoint` (your API base URL)
-
-Save this URL; you will use it in the web client configuration.
+On success, copy stack output `ApiEndpoint`.
 
 ---
 
-## 8) Verify the API quickly
+## 6) Verify the API quickly
 
 Set your deployed endpoint:
 
@@ -169,7 +234,7 @@ curl -s "$API_BASE_URL/games/<gameId>/legal-moves"
 
 ---
 
-## 9) Run the included web frontend against AWS
+## 7) Run the included web frontend against AWS
 
 In the repo root:
 
@@ -189,7 +254,7 @@ Frontend basics:
 
 ---
 
-## 10) Common troubleshooting
+## 8) Common troubleshooting
 
 ### A) `cdk bootstrap` permission errors
 Your IAM identity likely lacks one or more required permissions:
@@ -217,11 +282,14 @@ You may be using the wrong `gameId`, or trying to fetch a game that was never cr
 If you added custom domains or modified API Gateway, verify CORS settings and confirm frontend points to the correct API base URL.
 
 ### E) Region mismatch
-Make sure your AWS CLI default region matches where you deployed the stack.
+Make sure your AWS Console/CloudShell region and your deployment target region are the same.
+
+### F) CloudShell storage/session caveat
+CloudShell has persistent home storage but session limits. If your session resets, return to the same region and rerun commands as needed.
 
 ---
 
-## 11) Cost and safety notes
+## 9) Cost and safety notes
 
 Even small AWS resources can incur charges.
 
@@ -241,7 +309,7 @@ Confirm stack deletion in CloudFormation before assuming all resources are gone.
 
 ---
 
-## 12) Useful project commands reference
+## 10) Useful project commands reference
 
 From repository root:
 
@@ -257,16 +325,16 @@ npm run web:build
 
 ---
 
-## 13) Suggested first successful workflow
+## 11) Suggested first successful workflow (CloudShell)
 
-1. `npm install`
-2. `aws configure`
-3. `aws sts get-caller-identity`
-4. `npx cdk bootstrap`
-5. `npm run build`
-6. `npm run cdk:deploy`
-7. Copy `ApiEndpoint`
-8. `VITE_API_BASE_URL="..." npm run web:dev`
-9. Create a game in browser and submit one move
+1. Open AWS CloudShell in target region
+2. `git clone <your-repo-url>`
+3. `cd slamChess && npm install`
+4. `aws sts get-caller-identity`
+5. `npx cdk bootstrap`
+6. `npm run build`
+7. `npm run cdk:deploy`
+8. Copy `ApiEndpoint`
+9. Test `POST /games` with `curl`
 
 If you can do that sequence end-to-end, your AWS deployment is working.
