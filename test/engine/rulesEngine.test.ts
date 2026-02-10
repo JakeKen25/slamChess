@@ -107,6 +107,102 @@ describe('slam rules engine', () => {
     expect(listLegalMoves(blackQueenSideMissingRook).map((m) => `${m.from}-${m.to}`)).not.toContain('E8-C8');
   });
 
+  test('non-rook move to castling rook origin squares does not revoke rights', () => {
+    const scenarios = [
+      {
+        from: 'D4' as const,
+        to: 'A1' as const,
+        mover: { type: 'bishop' as const, color: 'black' as const },
+        target: { type: 'knight' as const, color: 'white' as const },
+        expected: { whiteQueenSide: true }
+      },
+      {
+        from: 'E4' as const,
+        to: 'H1' as const,
+        mover: { type: 'bishop' as const, color: 'black' as const },
+        target: { type: 'knight' as const, color: 'white' as const },
+        expected: { whiteKingSide: true }
+      },
+      {
+        from: 'D5' as const,
+        to: 'A8' as const,
+        mover: { type: 'bishop' as const, color: 'white' as const },
+        target: { type: 'knight' as const, color: 'black' as const },
+        expected: { blackQueenSide: true },
+        turn: 'white' as const
+      },
+      {
+        from: 'E5' as const,
+        to: 'H8' as const,
+        mover: { type: 'bishop' as const, color: 'white' as const },
+        target: { type: 'knight' as const, color: 'black' as const },
+        expected: { blackKingSide: true },
+        turn: 'white' as const
+      }
+    ];
+
+    for (const scenario of scenarios) {
+      const s = emptyState(scenario.turn ?? 'black');
+      s.castlingRights = { whiteKingSide: true, whiteQueenSide: true, blackKingSide: true, blackQueenSide: true };
+      s.board['E1'] = { type: 'king', color: 'white' };
+      s.board['E8'] = { type: 'king', color: 'black' };
+      s.board[scenario.from] = scenario.mover;
+      s.board[scenario.to] = scenario.target;
+
+      const { newState } = applyMove(s, { from: scenario.from, to: scenario.to });
+      expect(newState.castlingRights).toMatchObject(scenario.expected);
+    }
+  });
+
+  test('capturing rook on castling rook origin square revokes only that side right', () => {
+    const scenarios = [
+      {
+        from: 'D4' as const,
+        to: 'A1' as const,
+        mover: { type: 'bishop' as const, color: 'black' as const },
+        target: { type: 'rook' as const, color: 'white' as const },
+        expected: { whiteQueenSide: false, whiteKingSide: true, blackQueenSide: true, blackKingSide: true },
+        turn: 'black' as const
+      },
+      {
+        from: 'E4' as const,
+        to: 'H1' as const,
+        mover: { type: 'bishop' as const, color: 'black' as const },
+        target: { type: 'rook' as const, color: 'white' as const },
+        expected: { whiteQueenSide: true, whiteKingSide: false, blackQueenSide: true, blackKingSide: true },
+        turn: 'black' as const
+      },
+      {
+        from: 'D5' as const,
+        to: 'A8' as const,
+        mover: { type: 'bishop' as const, color: 'white' as const },
+        target: { type: 'rook' as const, color: 'black' as const },
+        expected: { whiteQueenSide: true, whiteKingSide: true, blackQueenSide: false, blackKingSide: true },
+        turn: 'white' as const
+      },
+      {
+        from: 'E5' as const,
+        to: 'H8' as const,
+        mover: { type: 'bishop' as const, color: 'white' as const },
+        target: { type: 'rook' as const, color: 'black' as const },
+        expected: { whiteQueenSide: true, whiteKingSide: true, blackQueenSide: true, blackKingSide: false },
+        turn: 'white' as const
+      }
+    ];
+
+    for (const scenario of scenarios) {
+      const s = emptyState(scenario.turn);
+      s.castlingRights = { whiteKingSide: true, whiteQueenSide: true, blackKingSide: true, blackQueenSide: true };
+      s.board['E1'] = { type: 'king', color: 'white' };
+      s.board['E8'] = { type: 'king', color: 'black' };
+      s.board[scenario.from] = scenario.mover;
+      s.board[scenario.to] = scenario.target;
+
+      const { newState } = applyMove(s, { from: scenario.from, to: scenario.to });
+      expect(newState.castlingRights).toEqual(scenario.expected);
+    }
+  });
+
   test('illegal self-check prevented', () => {
     const s = emptyState();
     s.board['E1'] = { type: 'king', color: 'white' };
