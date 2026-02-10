@@ -77,12 +77,12 @@ function candidateMoves(state: GameState, from: Square): Square[] {
     for (let dx=-1; dx<=1; dx++) for (let dy=-1; dy<=1; dy++) if (dx||dy) addIfValid(a.x+dx,a.y+dy);
     const rights = state.castlingRights;
     if (piece.color === 'white' && from === 'E1') {
-      if (rights.whiteKingSide && !state.board['F1'] && !state.board['G1']) res.push('G1');
-      if (rights.whiteQueenSide && !state.board['D1'] && !state.board['C1'] && !state.board['B1']) res.push('C1');
+      if (rights.whiteKingSide && state.board['H1']?.type === 'rook' && state.board['H1']?.color === 'white' && !state.board['F1'] && !state.board['G1']) res.push('G1');
+      if (rights.whiteQueenSide && state.board['A1']?.type === 'rook' && state.board['A1']?.color === 'white' && !state.board['D1'] && !state.board['C1'] && !state.board['B1']) res.push('C1');
     }
     if (piece.color === 'black' && from === 'E8') {
-      if (rights.blackKingSide && !state.board['F8'] && !state.board['G8']) res.push('G8');
-      if (rights.blackQueenSide && !state.board['D8'] && !state.board['C8'] && !state.board['B8']) res.push('C8');
+      if (rights.blackKingSide && state.board['H8']?.type === 'rook' && state.board['H8']?.color === 'black' && !state.board['F8'] && !state.board['G8']) res.push('G8');
+      if (rights.blackQueenSide && state.board['A8']?.type === 'rook' && state.board['A8']?.color === 'black' && !state.board['D8'] && !state.board['C8'] && !state.board['B8']) res.push('C8');
     }
   } else if (piece.type === 'pawn') {
     const dir = piece.color === 'white' ? 1 : -1;
