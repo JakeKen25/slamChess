@@ -187,16 +187,34 @@ function executeUnchecked(state: GameState, move: Move): { state: GameState; eve
 
 function updateCastlingRights(state: GameState, move: Move) {
   const rights = { ...state.castlingRights };
-  const p = state.board[move.from];
-  if (!p) return rights;
-  if (p.type === 'king') {
-    if (p.color === 'white') { rights.whiteKingSide = false; rights.whiteQueenSide = false; }
-    else { rights.blackKingSide = false; rights.blackQueenSide = false; }
+  const movingPiece = state.board[move.from];
+  const targetPiece = state.board[move.to];
+  if (!movingPiece) return rights;
+
+  if (movingPiece.type === 'king') {
+    if (movingPiece.color === 'white') {
+      rights.whiteKingSide = false;
+      rights.whiteQueenSide = false;
+    } else {
+      rights.blackKingSide = false;
+      rights.blackQueenSide = false;
+    }
   }
-  if (move.from === 'A1' || move.to === 'A1') rights.whiteQueenSide = false;
-  if (move.from === 'H1' || move.to === 'H1') rights.whiteKingSide = false;
-  if (move.from === 'A8' || move.to === 'A8') rights.blackQueenSide = false;
-  if (move.from === 'H8' || move.to === 'H8') rights.blackKingSide = false;
+
+  if (movingPiece.type === 'rook') {
+    if (movingPiece.color === 'white' && move.from === 'A1') rights.whiteQueenSide = false;
+    if (movingPiece.color === 'white' && move.from === 'H1') rights.whiteKingSide = false;
+    if (movingPiece.color === 'black' && move.from === 'A8') rights.blackQueenSide = false;
+    if (movingPiece.color === 'black' && move.from === 'H8') rights.blackKingSide = false;
+  }
+
+  if (targetPiece?.type === 'rook' && targetPiece.color !== movingPiece.color) {
+    if (targetPiece.color === 'white' && move.to === 'A1') rights.whiteQueenSide = false;
+    if (targetPiece.color === 'white' && move.to === 'H1') rights.whiteKingSide = false;
+    if (targetPiece.color === 'black' && move.to === 'A8') rights.blackQueenSide = false;
+    if (targetPiece.color === 'black' && move.to === 'H8') rights.blackKingSide = false;
+  }
+
   return rights;
 }
 
