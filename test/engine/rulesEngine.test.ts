@@ -154,4 +154,14 @@ describe('slam rules engine', () => {
     expect(listLegalMoves(kingState).map((m) => `${m.from}-${m.to}`)).not.toContain('E1-E2');
     expect(() => applyMove(kingState, { from: 'E1', to: 'E2' })).toThrow('Illegal move');
   });
+
+  test('rejects moves after game is over', () => {
+    const s = emptyState();
+    s.board['E1'] = { type: 'king', color: 'white' };
+    s.board['E8'] = { type: 'king', color: 'black' };
+    s.board['A1'] = { type: 'rook', color: 'white' };
+    s.gameOver = { winner: 'white', reason: 'checkmate' };
+
+    expect(() => applyMove(s, { from: 'A1', to: 'A8' })).toThrow('Game is over');
+  });
 });

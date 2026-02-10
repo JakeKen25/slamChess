@@ -71,4 +71,23 @@ describe('API handlers', () => {
     expect([400, 409]).toContain(response.statusCode);
     expect(JSON.parse(response.body).error).toBe('No piece on source square');
   });
+
+  test('submitMove returns client error when game is already over', async () => {
+    const repo = new InMemoryRepo();
+    const api = handlers(repo as any);
+    const created = await api.createGame();
+    const gameId = JSON.parse(created.body).gameId;
+
+    const state = await repo.get(gameId);
+    state!.gameOver = { winner: 'white', reason: 'checkmate' };
+    await repo.save(gameId, state!);
+
+    const response = await api.submitMove({
+      pathParameters: { gameId },
+      body: JSON.stringify({ from: 'E2', to: 'E4' })
+    } as any);
+
+    expect(response.statusCode).toBe(409);
+    expect(JSON.parse(response.body).error).toBe('Game is over');
+  });
 });
