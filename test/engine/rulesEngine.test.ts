@@ -79,6 +79,34 @@ describe('slam rules engine', () => {
     expect(legal).toContain('E1-C1');
   });
 
+  test('castling requires rook of matching color on origin square', () => {
+    const whiteKingSideMissingRook = emptyState();
+    whiteKingSideMissingRook.castlingRights.whiteKingSide = true;
+    whiteKingSideMissingRook.board['E1'] = { type: 'king', color: 'white' };
+    whiteKingSideMissingRook.board['E8'] = { type: 'king', color: 'black' };
+    expect(listLegalMoves(whiteKingSideMissingRook).map((m) => `${m.from}-${m.to}`)).not.toContain('E1-G1');
+
+    const whiteQueenSideWrongPiece = emptyState();
+    whiteQueenSideWrongPiece.castlingRights.whiteQueenSide = true;
+    whiteQueenSideWrongPiece.board['E1'] = { type: 'king', color: 'white' };
+    whiteQueenSideWrongPiece.board['A1'] = { type: 'bishop', color: 'white' };
+    whiteQueenSideWrongPiece.board['E8'] = { type: 'king', color: 'black' };
+    expect(listLegalMoves(whiteQueenSideWrongPiece).map((m) => `${m.from}-${m.to}`)).not.toContain('E1-C1');
+
+    const blackKingSideWrongColor = emptyState('black');
+    blackKingSideWrongColor.castlingRights.blackKingSide = true;
+    blackKingSideWrongColor.board['E8'] = { type: 'king', color: 'black' };
+    blackKingSideWrongColor.board['H8'] = { type: 'rook', color: 'white' };
+    blackKingSideWrongColor.board['E1'] = { type: 'king', color: 'white' };
+    expect(listLegalMoves(blackKingSideWrongColor).map((m) => `${m.from}-${m.to}`)).not.toContain('E8-G8');
+
+    const blackQueenSideMissingRook = emptyState('black');
+    blackQueenSideMissingRook.castlingRights.blackQueenSide = true;
+    blackQueenSideMissingRook.board['E8'] = { type: 'king', color: 'black' };
+    blackQueenSideMissingRook.board['E1'] = { type: 'king', color: 'white' };
+    expect(listLegalMoves(blackQueenSideMissingRook).map((m) => `${m.from}-${m.to}`)).not.toContain('E8-C8');
+  });
+
   test('illegal self-check prevented', () => {
     const s = emptyState();
     s.board['E1'] = { type: 'king', color: 'white' };
