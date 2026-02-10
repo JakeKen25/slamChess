@@ -19,13 +19,43 @@ paths:
                   value:
                     gameId: game_12345
                     status: active
-                    turn: white
-                    boardFEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+                    state:
+                      board:
+                        a1:
+                          color: white
+                          type: rook
+                        b1:
+                          color: white
+                          type: knight
+                        e1:
+                          color: white
+                          type: king
+                        e8:
+                          color: black
+                          type: king
+                      turn: white
+                      castlingRights:
+                        white:
+                          kingSide: true
+                          queenSide: true
+                        black:
+                          kingSide: true
+                          queenSide: true
+                      history: []
                     events:
-                      - type: game_created
+                      - type: Moved
+                        player: white
+                        move:
+                          from: e2
+                          to: e4
+                          piece:
+                            color: white
+                            type: pawn
+                          moveType: normal
+                          san: e4
                         moveNumber: 0
                         timestamp: '2026-02-10T09:30:00Z'
-                        detail: Game initialized
+                        resultingTurn: black
         '500':
           $ref: '#/components/responses/InternalServerError'
   /games/{gameId}:
@@ -46,13 +76,57 @@ paths:
                   value:
                     gameId: game_12345
                     status: active
-                    turn: black
-                    boardFEN: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2
+                    state:
+                      board:
+                        e4:
+                          color: white
+                          type: pawn
+                        e5:
+                          color: black
+                          type: pawn
+                        e1:
+                          color: white
+                          type: king
+                        e8:
+                          color: black
+                          type: king
+                      turn: white
+                      castlingRights:
+                        white:
+                          kingSide: true
+                          queenSide: true
+                        black:
+                          kingSide: true
+                          queenSide: true
+                      history:
+                        - from: e2
+                          to: e4
+                          piece:
+                            color: white
+                            type: pawn
+                          moveType: normal
+                          san: e4
+                        - from: e7
+                          to: e5
+                          piece:
+                            color: black
+                            type: pawn
+                          moveType: normal
+                          san: e5
                     events:
-                      - type: move_submitted
+                      - type: Moved
+                        player: black
+                        move:
+                          from: e7
+                          to: e5
+                          piece:
+                            color: black
+                            type: pawn
+                          moveType: normal
+                          san: e5
                         moveNumber: 1
                         timestamp: '2026-02-10T09:33:00Z'
-                        detail: white moved e2 to e4
+                        resultingTurn: white
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -74,6 +148,7 @@ paths:
                 value:
                   from: e2
                   to: e4
+                  moveType: normal
       responses:
         '200':
           description: Move accepted
@@ -83,17 +158,134 @@ paths:
                 $ref: '#/components/schemas/GameStateResponse'
               examples:
                 updated-state:
-                  summary: State after move
+                  summary: State after a normal move
                   value:
                     gameId: game_12345
                     status: active
-                    turn: black
-                    boardFEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1
+                    state:
+                      board:
+                        e4:
+                          color: white
+                          type: pawn
+                        e1:
+                          color: white
+                          type: king
+                        e8:
+                          color: black
+                          type: king
+                      turn: black
+                      castlingRights:
+                        white:
+                          kingSide: true
+                          queenSide: true
+                        black:
+                          kingSide: true
+                          queenSide: true
+                      history:
+                        - from: e2
+                          to: e4
+                          piece:
+                            color: white
+                            type: pawn
+                          moveType: normal
+                          san: e4
                     events:
-                      - type: move_submitted
+                      - type: Moved
+                        player: white
+                        move:
+                          from: e2
+                          to: e4
+                          piece:
+                            color: white
+                            type: pawn
+                          moveType: normal
+                          san: e4
                         moveNumber: 1
                         timestamp: '2026-02-10T09:33:00Z'
-                        detail: white moved e2 to e4
+                        resultingTurn: black
+                slam-with-promotion:
+                  summary: State after slam move with destruction and promotion
+                  value:
+                    gameId: game_98765
+                    status: active
+                    state:
+                      board:
+                        g8:
+                          color: white
+                          type: queen
+                        e1:
+                          color: white
+                          type: king
+                        e8:
+                          color: black
+                          type: king
+                      turn: black
+                      castlingRights:
+                        white:
+                          kingSide: false
+                          queenSide: false
+                        black:
+                          kingSide: false
+                          queenSide: false
+                      history:
+                        - from: g7
+                          to: g8
+                          piece:
+                            color: white
+                            type: pawn
+                          moveType: slam
+                          promotedTo: queen
+                          destroyedSquares:
+                            - f8
+                            - h8
+                          san: g8=Q
+                    events:
+                      - type: Moved
+                        player: white
+                        move:
+                          from: g7
+                          to: g8
+                          piece:
+                            color: white
+                            type: pawn
+                          moveType: slam
+                          promotedTo: queen
+                          destroyedSquares:
+                            - f8
+                            - h8
+                          san: g8=Q
+                        moveNumber: 23
+                        timestamp: '2026-02-10T10:02:00Z'
+                        resultingTurn: black
+                      - type: Slammed
+                        player: white
+                        at: g8
+                        destroyedSquares:
+                          - f8
+                          - h8
+                        moveNumber: 23
+                        timestamp: '2026-02-10T10:02:00Z'
+                      - type: Destroyed
+                        square: f8
+                        destroyedPiece:
+                          color: black
+                          type: rook
+                        moveNumber: 23
+                        timestamp: '2026-02-10T10:02:00Z'
+                      - type: Destroyed
+                        square: h8
+                        destroyedPiece:
+                          color: black
+                          type: rook
+                        moveNumber: 23
+                        timestamp: '2026-02-10T10:02:00Z'
+                      - type: Promotion
+                        player: white
+                        square: g8
+                        from: pawn
+                        to: queen
+                        moveNumber: 23
+                        timestamp: '2026-02-10T10:02:00Z'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -124,12 +316,20 @@ paths:
                         player: white
                         from: e2
                         to: e4
+                        piece:
+                          color: white
+                          type: pawn
+                        moveType: normal
                         san: e4
                         timestamp: '2026-02-10T09:33:00Z'
                       - moveNumber: 1
                         player: black
                         from: e7
                         to: e5
+                        piece:
+                          color: black
+                          type: pawn
+                        moveType: normal
                         san: e5
                         timestamp: '2026-02-10T09:33:45Z'
         '404':
@@ -153,13 +353,32 @@ paths:
                   summary: Start position legal moves
                   value:
                     gameId: game_12345
-                    moves:
+                    byOrigin:
                       a2:
                         - a3
                         - a4
                       b1:
                         - a3
                         - c3
+                    legalMoves:
+                      - from: a2
+                        to: a3
+                        piece:
+                          color: white
+                          type: pawn
+                        moveType: normal
+                      - from: a2
+                        to: a4
+                        piece:
+                          color: white
+                          type: pawn
+                        moveType: normal
+                      - from: b1
+                        to: a3
+                        piece:
+                          color: white
+                          type: knight
+                        moveType: normal
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -225,31 +444,111 @@ components:
                 error: An unexpected error occurred
 
   schemas:
+    Square:
+      type: string
+      pattern: '^[a-h][1-8]$'
+      example: e4
+
+    PieceColor:
+      type: string
+      enum: [white, black]
+
+    PieceType:
+      type: string
+      enum: [pawn, knight, bishop, rook, queen, king]
+
+    Piece:
+      type: object
+      additionalProperties: false
+      required:
+        - color
+        - type
+      properties:
+        color:
+          $ref: '#/components/schemas/PieceColor'
+        type:
+          $ref: '#/components/schemas/PieceType'
+
+    CastlingSideRights:
+      type: object
+      additionalProperties: false
+      required:
+        - kingSide
+        - queenSide
+      properties:
+        kingSide:
+          type: boolean
+        queenSide:
+          type: boolean
+
+    CastlingRights:
+      type: object
+      additionalProperties: false
+      required:
+        - white
+        - black
+      properties:
+        white:
+          $ref: '#/components/schemas/CastlingSideRights'
+        black:
+          $ref: '#/components/schemas/CastlingSideRights'
+
+    Move:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - piece
+        - moveType
+      properties:
+        from:
+          $ref: '#/components/schemas/Square'
+        to:
+          $ref: '#/components/schemas/Square'
+        piece:
+          $ref: '#/components/schemas/Piece'
+        moveType:
+          type: string
+          enum: [normal, slam]
+          description: '`slam` indicates a slam chess move with blast effects.'
+        promotedTo:
+          $ref: '#/components/schemas/PieceType'
+        destroyedSquares:
+          type: array
+          items:
+            $ref: '#/components/schemas/Square'
+        san:
+          type: string
+          description: Standard Algebraic Notation.
+          example: e4
+
     MoveSubmissionRequest:
       type: object
       additionalProperties: false
       required:
         - from
         - to
+        - moveType
       properties:
         from:
-          type: string
-          pattern: '^[a-h][1-8]$'
-          description: Origin square in algebraic coordinate notation.
-          example: e2
+          $ref: '#/components/schemas/Square'
         to:
+          $ref: '#/components/schemas/Square'
+        moveType:
           type: string
-          pattern: '^[a-h][1-8]$'
-          description: Destination square in algebraic coordinate notation.
-          example: e4
+          enum: [normal, slam]
+        promoteTo:
+          $ref: '#/components/schemas/PieceType'
+      description: Client-submitted move intent.
 
     GameStateResponse:
       type: object
+      additionalProperties: false
       required:
         - gameId
         - status
-        - turn
-        - boardFEN
+        - state
         - events
       properties:
         gameId:
@@ -259,21 +558,57 @@ components:
           type: string
           enum: [active, checkmate, stalemate, resigned, draw]
           example: active
-        turn:
-          type: string
-          enum: [white, black]
-          example: white
-        boardFEN:
-          type: string
-          description: Board state encoded as a FEN string.
-          example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+        state:
+          $ref: '#/components/schemas/GameState'
         events:
           type: array
           items:
             $ref: '#/components/schemas/GameEvent'
 
-    GameEvent:
+    GameState:
       type: object
+      additionalProperties: false
+      required:
+        - board
+        - turn
+        - castlingRights
+        - history
+      properties:
+        board:
+          type: object
+          description: Map of occupied squares to piece metadata.
+          additionalProperties:
+            $ref: '#/components/schemas/Piece'
+        turn:
+          $ref: '#/components/schemas/PieceColor'
+        castlingRights:
+          $ref: '#/components/schemas/CastlingRights'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/Move'
+
+    GameEvent:
+      oneOf:
+        - $ref: '#/components/schemas/MovedEvent'
+        - $ref: '#/components/schemas/SlammedEvent'
+        - $ref: '#/components/schemas/DestroyedEvent'
+        - $ref: '#/components/schemas/PromotionEvent'
+        - $ref: '#/components/schemas/CheckEvent'
+        - $ref: '#/components/schemas/CheckmateEvent'
+      discriminator:
+        propertyName: type
+        mapping:
+          Moved: '#/components/schemas/MovedEvent'
+          Slammed: '#/components/schemas/SlammedEvent'
+          Destroyed: '#/components/schemas/DestroyedEvent'
+          Promotion: '#/components/schemas/PromotionEvent'
+          Check: '#/components/schemas/CheckEvent'
+          Checkmate: '#/components/schemas/CheckmateEvent'
+
+    GameEventBase:
+      type: object
+      additionalProperties: false
       required:
         - type
         - moveNumber
@@ -281,7 +616,6 @@ components:
       properties:
         type:
           type: string
-          example: move_submitted
         moveNumber:
           type: integer
           minimum: 0
@@ -290,9 +624,99 @@ components:
           type: string
           format: date-time
           example: '2026-02-10T09:33:00Z'
-        detail:
-          type: string
-          example: white moved e2 to e4
+
+    MovedEvent:
+      allOf:
+        - $ref: '#/components/schemas/GameEventBase'
+        - type: object
+          required: [type, player, move, resultingTurn]
+          properties:
+            type:
+              type: string
+              enum: [Moved]
+            player:
+              $ref: '#/components/schemas/PieceColor'
+            move:
+              $ref: '#/components/schemas/Move'
+            resultingTurn:
+              $ref: '#/components/schemas/PieceColor'
+
+    SlammedEvent:
+      allOf:
+        - $ref: '#/components/schemas/GameEventBase'
+        - type: object
+          required: [type, player, at, destroyedSquares]
+          properties:
+            type:
+              type: string
+              enum: [Slammed]
+            player:
+              $ref: '#/components/schemas/PieceColor'
+            at:
+              $ref: '#/components/schemas/Square'
+            destroyedSquares:
+              type: array
+              items:
+                $ref: '#/components/schemas/Square'
+
+    DestroyedEvent:
+      allOf:
+        - $ref: '#/components/schemas/GameEventBase'
+        - type: object
+          required: [type, square, destroyedPiece]
+          properties:
+            type:
+              type: string
+              enum: [Destroyed]
+            square:
+              $ref: '#/components/schemas/Square'
+            destroyedPiece:
+              $ref: '#/components/schemas/Piece'
+
+    PromotionEvent:
+      allOf:
+        - $ref: '#/components/schemas/GameEventBase'
+        - type: object
+          required: [type, player, square, from, to]
+          properties:
+            type:
+              type: string
+              enum: [Promotion]
+            player:
+              $ref: '#/components/schemas/PieceColor'
+            square:
+              $ref: '#/components/schemas/Square'
+            from:
+              type: string
+              enum: [pawn]
+            to:
+              $ref: '#/components/schemas/PieceType'
+
+    CheckEvent:
+      allOf:
+        - $ref: '#/components/schemas/GameEventBase'
+        - type: object
+          required: [type, checkedPlayer]
+          properties:
+            type:
+              type: string
+              enum: [Check]
+            checkedPlayer:
+              $ref: '#/components/schemas/PieceColor'
+
+    CheckmateEvent:
+      allOf:
+        - $ref: '#/components/schemas/GameEventBase'
+        - type: object
+          required: [type, winner, loser]
+          properties:
+            type:
+              type: string
+              enum: [Checkmate]
+            winner:
+              $ref: '#/components/schemas/PieceColor'
+            loser:
+              $ref: '#/components/schemas/PieceColor'
 
     HistoryResponse:
       type: object
@@ -309,56 +733,49 @@ components:
             $ref: '#/components/schemas/HistoryMove'
 
     HistoryMove:
-      type: object
-      required:
-        - moveNumber
-        - player
-        - from
-        - to
-        - timestamp
-      properties:
-        moveNumber:
-          type: integer
-          minimum: 1
-          example: 1
-        player:
-          type: string
-          enum: [white, black]
-          example: white
-        from:
-          type: string
-          pattern: '^[a-h][1-8]$'
-          example: e2
-        to:
-          type: string
-          pattern: '^[a-h][1-8]$'
-          example: e4
-        san:
-          type: string
-          description: Standard Algebraic Notation of the move, when available.
-          example: e4
-        timestamp:
-          type: string
-          format: date-time
-          example: '2026-02-10T09:33:00Z'
+      allOf:
+        - $ref: '#/components/schemas/Move'
+        - type: object
+          additionalProperties: false
+          required:
+            - moveNumber
+            - player
+            - timestamp
+          properties:
+            moveNumber:
+              type: integer
+              minimum: 1
+              example: 1
+            player:
+              $ref: '#/components/schemas/PieceColor'
+            timestamp:
+              type: string
+              format: date-time
+              example: '2026-02-10T09:33:00Z'
 
     LegalMovesResponse:
       type: object
+      additionalProperties: false
       required:
         - gameId
-        - moves
+        - byOrigin
+        - legalMoves
       properties:
         gameId:
           type: string
           example: game_12345
-        moves:
+        byOrigin:
           type: object
           description: Map of origin square to legal destination squares.
           additionalProperties:
             type: array
             items:
-              type: string
-              pattern: '^[a-h][1-8]$'
+              $ref: '#/components/schemas/Square'
+        legalMoves:
+          type: array
+          description: Fully typed legal moves suitable for code generation.
+          items:
+            $ref: '#/components/schemas/Move'
 
     ErrorResponse:
       type: object
