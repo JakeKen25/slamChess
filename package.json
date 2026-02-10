@@ -9,7 +9,9 @@
     "test:unit": "jest --runInBand test/engine",
     "test:integration": "jest --runInBand test/api",
     "cdk:synth": "cdk synth",
-    "cdk:deploy": "cdk deploy"
+    "cdk:deploy": "cdk deploy",
+    "web:dev": "npm run dev --workspace @slamchess/web",
+    "web:build": "npm run build --workspace @slamchess/web"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.767.0",
@@ -27,5 +29,8 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
-  }
+  },
+  "workspaces": [
+    "apps/*"
+  ]
 }
