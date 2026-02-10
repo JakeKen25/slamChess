@@ -6,15 +6,370 @@ paths:
   /games:
     post:
       summary: Create a new game
+      responses:
+        '201':
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameStateResponse'
+              examples:
+                created-game:
+                  summary: New game
+                  value:
+                    gameId: game_12345
+                    status: active
+                    turn: white
+                    boardFEN: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+                    events:
+                      - type: game_created
+                        moveNumber: 0
+                        timestamp: '2026-02-10T09:30:00Z'
+                        detail: Game initialized
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /games/{gameId}:
     get:
       summary: Get game state
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      responses:
+        '200':
+          description: Current game state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameStateResponse'
+              examples:
+                game-state:
+                  summary: Active game state
+                  value:
+                    gameId: game_12345
+                    status: active
+                    turn: black
+                    boardFEN: rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2
+                    events:
+                      - type: move_submitted
+                        moveNumber: 1
+                        timestamp: '2026-02-10T09:33:00Z'
+                        detail: white moved e2 to e4
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /games/{gameId}/moves:
     post:
       summary: Submit move
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveSubmissionRequest'
+            examples:
+              kings-pawn:
+                summary: Standard opening move
+                value:
+                  from: e2
+                  to: e4
+      responses:
+        '200':
+          description: Move accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameStateResponse'
+              examples:
+                updated-state:
+                  summary: State after move
+                  value:
+                    gameId: game_12345
+                    status: active
+                    turn: black
+                    boardFEN: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1
+                    events:
+                      - type: move_submitted
+                        moveNumber: 1
+                        timestamp: '2026-02-10T09:33:00Z'
+                        detail: white moved e2 to e4
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /games/{gameId}/history:
     get:
       summary: List move history
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      responses:
+        '200':
+          description: List of moves submitted in order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryResponse'
+              examples:
+                opening-history:
+                  summary: First two plies
+                  value:
+                    gameId: game_12345
+                    moves:
+                      - moveNumber: 1
+                        player: white
+                        from: e2
+                        to: e4
+                        san: e4
+                        timestamp: '2026-02-10T09:33:00Z'
+                      - moveNumber: 1
+                        player: black
+                        from: e7
+                        to: e5
+                        san: e5
+                        timestamp: '2026-02-10T09:33:45Z'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /games/{gameId}/legal-moves:
     get:
       summary: List legal moves
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      responses:
+        '200':
+          description: Legal destination squares from each origin square
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalMovesResponse'
+              examples:
+                white-to-move:
+                  summary: Start position legal moves
+                  value:
+                    gameId: game_12345
+                    moves:
+                      a2:
+                        - a3
+                        - a4
+                      b1:
+                        - a3
+                        - c3
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  parameters:
+    GameId:
+      name: gameId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique identifier of the game.
+
+  responses:
+    BadRequest:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid-square:
+              summary: Invalid square format
+              value:
+                error: Invalid square format for `from`
+                code: INVALID_REQUEST
+    NotFound:
+      description: Resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            game-not-found:
+              summary: Unknown game ID
+              value:
+                error: Game not found
+                code: GAME_NOT_FOUND
+    Conflict:
+      description: Request conflicts with current game state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            illegal-move:
+              summary: Move rejected
+              value:
+                error: Illegal move for current player
+                code: ILLEGAL_MOVE
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unexpected:
+              summary: Generic failure
+              value:
+                error: An unexpected error occurred
+
+  schemas:
+    MoveSubmissionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - from
+        - to
+      properties:
+        from:
+          type: string
+          pattern: '^[a-h][1-8]$'
+          description: Origin square in algebraic coordinate notation.
+          example: e2
+        to:
+          type: string
+          pattern: '^[a-h][1-8]$'
+          description: Destination square in algebraic coordinate notation.
+          example: e4
+
+    GameStateResponse:
+      type: object
+      required:
+        - gameId
+        - status
+        - turn
+        - boardFEN
+        - events
+      properties:
+        gameId:
+          type: string
+          example: game_12345
+        status:
+          type: string
+          enum: [active, checkmate, stalemate, resigned, draw]
+          example: active
+        turn:
+          type: string
+          enum: [white, black]
+          example: white
+        boardFEN:
+          type: string
+          description: Board state encoded as a FEN string.
+          example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/GameEvent'
+
+    GameEvent:
+      type: object
+      required:
+        - type
+        - moveNumber
+        - timestamp
+      properties:
+        type:
+          type: string
+          example: move_submitted
+        moveNumber:
+          type: integer
+          minimum: 0
+          example: 12
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-02-10T09:33:00Z'
+        detail:
+          type: string
+          example: white moved e2 to e4
+
+    HistoryResponse:
+      type: object
+      required:
+        - gameId
+        - moves
+      properties:
+        gameId:
+          type: string
+          example: game_12345
+        moves:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryMove'
+
+    HistoryMove:
+      type: object
+      required:
+        - moveNumber
+        - player
+        - from
+        - to
+        - timestamp
+      properties:
+        moveNumber:
+          type: integer
+          minimum: 1
+          example: 1
+        player:
+          type: string
+          enum: [white, black]
+          example: white
+        from:
+          type: string
+          pattern: '^[a-h][1-8]$'
+          example: e2
+        to:
+          type: string
+          pattern: '^[a-h][1-8]$'
+          example: e4
+        san:
+          type: string
+          description: Standard Algebraic Notation of the move, when available.
+          example: e4
+        timestamp:
+          type: string
+          format: date-time
+          example: '2026-02-10T09:33:00Z'
+
+    LegalMovesResponse:
+      type: object
+      required:
+        - gameId
+        - moves
+      properties:
+        gameId:
+          type: string
+          example: game_12345
+        moves:
+          type: object
+          description: Map of origin square to legal destination squares.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-h][1-8]$'
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Invalid move
+        code:
+          type: string
+          description: Optional machine-readable error code.
+          example: ILLEGAL_MOVE
