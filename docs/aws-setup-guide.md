@@ -84,22 +84,41 @@ npm install
 aws sts get-caller-identity
 ```
 
-### 4.5 Bootstrap CDK (one-time per account/region)
+### 4.5 Build once before CDK commands
+
+```bash
+npm run build
+```
+
+This avoids runtime TypeScript loader issues in some environments (including CloudShell).
+
+### 4.6 Bootstrap CDK (one-time per account/region)
 
 ```bash
 npx cdk bootstrap
 ```
 
-### 4.6 Build and deploy
+If you see `ERR_UNKNOWN_FILE_EXTENSION` for `infra/bin/deploy.ts`, run CDK against the compiled app instead:
 
 ```bash
-npm run build
+npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
+```
+
+### 4.7 Deploy
+
+```bash
 npm run cdk:deploy
+```
+
+If `npm run cdk:deploy` fails with the same TypeScript extension error, use:
+
+```bash
+npx cdk deploy --app "node dist/infra/bin/deploy.js"
 ```
 
 When deployment completes, copy the `ApiEndpoint` output.
 
-### 4.7 Verify API from CloudShell
+### 4.8 Verify API from CloudShell
 
 ```bash
 export API_BASE_URL="https://<your-api-id>.execute-api.<region>.amazonaws.com"
@@ -118,7 +137,7 @@ curl -s "$API_BASE_URL/games/<gameId>/history"
 curl -s "$API_BASE_URL/games/<gameId>/legal-moves"
 ```
 
-### 4.8 Use the frontend
+### 4.9 Use the frontend
 
 The frontend can be run:
 
@@ -173,17 +192,34 @@ Validate identity:
 aws sts get-caller-identity
 ```
 
-### 5.3 Bootstrap CDK
+### 5.3 Build once before CDK commands
+
+```bash
+npm run build
+```
+
+### 5.4 Bootstrap CDK
 
 ```bash
 npx cdk bootstrap
 ```
 
-### 5.4 Build and deploy
+If you see `ERR_UNKNOWN_FILE_EXTENSION` for `infra/bin/deploy.ts`, use:
 
 ```bash
-npm run build
+npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
+```
+
+### 5.5 Deploy
+
+```bash
 npm run cdk:deploy
+```
+
+If deploy fails with the same TypeScript extension error, use:
+
+```bash
+npx cdk deploy --app "node dist/infra/bin/deploy.js"
 ```
 
 On success, copy stack output `ApiEndpoint`.
@@ -287,6 +323,19 @@ Make sure your AWS Console/CloudShell region and your deployment target region a
 ### F) CloudShell storage/session caveat
 CloudShell has persistent home storage but session limits. If your session resets, return to the same region and rerun commands as needed.
 
+### G) `ERR_UNKNOWN_FILE_EXTENSION` for `infra/bin/deploy.ts`
+This is a known environment/runtime issue when CDK tries to execute the TypeScript app entrypoint directly.
+
+Use the compiled JavaScript entrypoint instead:
+
+```bash
+npm run build
+npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
+npx cdk deploy --app "node dist/infra/bin/deploy.js"
+```
+
+This workaround requires **no source-code changes** to the repository.
+
 ---
 
 ## 9) Cost and safety notes
@@ -331,9 +380,9 @@ npm run web:build
 2. `git clone <your-repo-url>`
 3. `cd slamChess && npm install`
 4. `aws sts get-caller-identity`
-5. `npx cdk bootstrap`
-6. `npm run build`
-7. `npm run cdk:deploy`
+5. `npm run build`
+6. `npx cdk bootstrap --app "node dist/infra/bin/deploy.js"`
+7. `npx cdk deploy --app "node dist/infra/bin/deploy.js"`
 8. Copy `ApiEndpoint`
 9. Test `POST /games` with `curl`
 
