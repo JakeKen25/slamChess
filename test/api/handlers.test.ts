@@ -41,4 +41,34 @@ describe('API handlers', () => {
     expect(history.statusCode).toBe(200);
     expect(JSON.parse(history.body).history.length).toBe(1);
   });
+
+  test('submitMove returns 400 for malformed JSON body', async () => {
+    const repo = new InMemoryRepo();
+    const api = handlers(repo as any);
+    const created = await api.createGame();
+    const gameId = JSON.parse(created.body).gameId;
+
+    const response = await api.submitMove({
+      pathParameters: { gameId },
+      body: '{"from":"E2","to":"E4"'
+    } as any);
+
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body).error).toBe('Invalid JSON body');
+  });
+
+  test('submitMove returns conflict status for illegal move errors', async () => {
+    const repo = new InMemoryRepo();
+    const api = handlers(repo as any);
+    const created = await api.createGame();
+    const gameId = JSON.parse(created.body).gameId;
+
+    const response = await api.submitMove({
+      pathParameters: { gameId },
+      body: JSON.stringify({ from: 'E3', to: 'E4' })
+    } as any);
+
+    expect([400, 409]).toContain(response.statusCode);
+    expect(JSON.parse(response.body).error).toBe('No piece on source square');
+  });
 });
