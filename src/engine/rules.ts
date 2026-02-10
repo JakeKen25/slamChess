@@ -64,7 +64,11 @@ function candidateMoves(state: GameState, from: Square): Square[] {
     const to = coordsToSquare(x, y);
     if (!to) return;
     const target = state.board[to];
-    if (!target || target.color !== piece.color) res.push(to);
+    if (!target) {
+      res.push(to);
+      return;
+    }
+    if (target.color !== piece.color && target.type !== 'king') res.push(to);
   };
 
   if (piece.type === 'knight') {
@@ -91,7 +95,7 @@ function candidateMoves(state: GameState, from: Square): Square[] {
       const diag = coordsToSquare(a.x + dx, a.y + dir);
       if (!diag) continue;
       const target = state.board[diag];
-      if (target && target.color !== piece.color) res.push(diag);
+      if (target && target.color !== piece.color && target.type !== 'king') res.push(diag);
     }
   } else {
     const dirs = piece.type === 'rook' ? DIRS.rook : piece.type === 'bishop' ? DIRS.bishop : DIRS.queen;
@@ -104,7 +108,7 @@ function candidateMoves(state: GameState, from: Square): Square[] {
         if (!t) {
           res.push(sq);
         } else {
-          if (t.color !== piece.color) res.push(sq);
+          if (t.color !== piece.color && t.type !== 'king') res.push(sq);
           break;
         }
         x += dx; y += dy;
@@ -228,6 +232,7 @@ export function applyMove(gameState: GameState, move: Move): { newState: GameSta
   const piece = gameState.board[move.from];
   if (!piece) throw new Error('No piece on source square');
   if (piece.color !== gameState.turn) throw new Error('Not your turn');
+  if (gameState.board[move.to]?.type === 'king') throw new Error('Illegal move');
   const legal = listLegalMoves(gameState).some((m) => m.from === move.from && m.to === move.to);
   if (!legal) throw new Error('Illegal move');
 
