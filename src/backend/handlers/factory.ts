@@ -17,7 +17,7 @@ function isMove(value: unknown): value is Move {
 
 function isIllegalMoveError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  return ['No piece on source square', 'Not your turn', 'Illegal move'].includes(error.message);
+  return ['No piece on source square', 'Not your turn', 'Illegal move', 'Game is over'].includes(error.message);
 }
 
 export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) {

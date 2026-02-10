@@ -229,6 +229,7 @@ function isSquareAttacked(board: Record<Square, Piece | undefined>, square: Squa
 }
 
 export function applyMove(gameState: GameState, move: Move): { newState: GameState; events: GameEvent[] } {
+  if (gameState.gameOver) throw new Error('Game is over');
   const piece = gameState.board[move.from];
   if (!piece) throw new Error('No piece on source square');
   if (piece.color !== gameState.turn) throw new Error('Not your turn');
