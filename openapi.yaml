@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info:
+  title: Slam Chess API
+  version: 1.0.0
+paths:
+  /games:
+    post:
+      summary: Create a new game
+  /games/{gameId}:
+    get:
+      summary: Get game state
+  /games/{gameId}/moves:
+    post:
+      summary: Submit move
+  /games/{gameId}/history:
+    get:
+      summary: List move history
+  /games/{gameId}/legal-moves:
+    get:
+      summary: List legal moves
