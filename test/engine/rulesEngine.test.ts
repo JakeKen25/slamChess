@@ -97,4 +97,33 @@ describe('slam rules engine', () => {
     expect(events.find((e) => e.type === 'Check')).toBeTruthy();
     expect(events.find((e) => e.type === 'Checkmate')).toBeTruthy();
   });
+
+  test('cannot move onto enemy king square for sliders, knights, pawns, and kings', () => {
+    const sliderState = emptyState();
+    sliderState.board['A1'] = { type: 'rook', color: 'white' };
+    sliderState.board['A4'] = { type: 'king', color: 'black' };
+    sliderState.board['E1'] = { type: 'king', color: 'white' };
+    expect(listLegalMoves(sliderState).map((m) => `${m.from}-${m.to}`)).not.toContain('A1-A4');
+    expect(() => applyMove(sliderState, { from: 'A1', to: 'A4' })).toThrow('Illegal move');
+
+    const knightState = emptyState();
+    knightState.board['B1'] = { type: 'knight', color: 'white' };
+    knightState.board['C3'] = { type: 'king', color: 'black' };
+    knightState.board['E1'] = { type: 'king', color: 'white' };
+    expect(listLegalMoves(knightState).map((m) => `${m.from}-${m.to}`)).not.toContain('B1-C3');
+    expect(() => applyMove(knightState, { from: 'B1', to: 'C3' })).toThrow('Illegal move');
+
+    const pawnState = emptyState();
+    pawnState.board['E4'] = { type: 'pawn', color: 'white' };
+    pawnState.board['F5'] = { type: 'king', color: 'black' };
+    pawnState.board['A1'] = { type: 'king', color: 'white' };
+    expect(listLegalMoves(pawnState).map((m) => `${m.from}-${m.to}`)).not.toContain('E4-F5');
+    expect(() => applyMove(pawnState, { from: 'E4', to: 'F5' })).toThrow('Illegal move');
+
+    const kingState = emptyState();
+    kingState.board['E1'] = { type: 'king', color: 'white' };
+    kingState.board['E2'] = { type: 'king', color: 'black' };
+    expect(listLegalMoves(kingState).map((m) => `${m.from}-${m.to}`)).not.toContain('E1-E2');
+    expect(() => applyMove(kingState, { from: 'E1', to: 'E2' })).toThrow('Illegal move');
+  });
 });
