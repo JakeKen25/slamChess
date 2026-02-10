@@ -336,6 +336,24 @@ npx cdk deploy --app "node dist/infra/bin/deploy.js"
 
 This workaround requires **no source-code changes** to the repository.
 
+### H) API returns 500 with `Runtime.UserCodeSyntaxError` and `Cannot use import statement outside a module`
+If Lambda logs show this error, your deployment is using an older packaging approach.
+
+Fix by updating to the latest repo version and redeploying (the build now prepares Lambda output with an ESM marker file):
+
+```bash
+git pull
+npm install
+npm run cdk:deploy
+```
+
+Then retry:
+
+```bash
+export API_BASE_URL="<ApiEndpoint from deploy output>"
+curl -i -X POST "$API_BASE_URL/games" -H "content-type: application/json"
+```
+
 ---
 
 ## 9) Cost and safety notes
