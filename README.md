@@ -16,6 +16,7 @@ Tournament-ready chess-inspired game backend with deterministic slam mechanics.
 - `infra/`: CDK stack
 - `test/engine/`: rules unit tests
 - `test/api/`: integration tests
+- `apps/web/`: React + Vite frontend client
 
 ## Setup
 ```bash
@@ -26,6 +27,33 @@ npm test
 
 ## Local development
 Rules engine can be imported from `src/engine/index.ts` and used in Node or transpiled for browser/Python bridge bindings.
+
+### Frontend setup (`apps/web`)
+The web client uses React + Vite and talks to the Slam Chess API.
+
+```bash
+npm install
+npm run web:dev
+```
+
+Environment variable:
+- `VITE_API_BASE_URL` — base URL for backend API (default `http://localhost:3000`).
+
+Examples:
+
+```bash
+# macOS/Linux
+VITE_API_BASE_URL=http://localhost:3000 npm run web:dev
+
+# Windows PowerShell
+$env:VITE_API_BASE_URL="http://localhost:3000"; npm run web:dev
+```
+
+Build frontend:
+
+```bash
+npm run web:build
+```
 
 ## Deploy to AWS
 Prerequisites:
