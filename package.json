@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/prepare-lambda.mjs",
     "test": "jest --runInBand",
     "test:unit": "jest --runInBand test/engine",
     "test:integration": "jest --runInBand test/api",
-    "cdk:synth": "cdk synth",
-    "cdk:deploy": "cdk deploy",
+    "cdk:synth": "npm run build && cdk synth --app \"node dist/infra/bin/deploy.js\"",
+    "cdk:deploy": "npm run build && cdk deploy --app \"node dist/infra/bin/deploy.js\"",
     "web:dev": "npm run dev --workspace @slamchess/web",
     "web:build": "npm run build --workspace @slamchess/web"
   },
