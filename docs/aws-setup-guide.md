@@ -152,8 +152,10 @@ npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
 npm run cdk:deploy
 ```
 
-### B) API returns 500 with `Cannot use import statement outside a module`
-Update to latest repo and redeploy:
+### B) API returns 500 with `Cannot find package 'uuid'` (or other missing package)
+This means Lambda code was uploaded without bundled runtime dependencies.
+
+Use the latest repo version (which bundles handlers via `NodejsFunction`) and redeploy:
 
 ```bash
 git pull
@@ -168,6 +170,16 @@ Use `ApiEndpoint` from stack output, not account ID-based URL.
 
 ### D) 404 with `/games/1`
 `gameId` is generated UUID-like string from `POST /games`; it is not numeric.
+
+### E) `spawnSync docker ENOENT` during `cdk deploy`
+This appears when CDK cannot find local `esbuild` and falls back to Docker bundling.
+
+Install dependencies in repo root (includes `esbuild`) and rerun:
+
+```bash
+npm install
+npm run cdk:deploy
+```
 
 ---
 

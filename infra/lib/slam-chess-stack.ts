@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as path from 'node:path';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 
@@ -15,22 +17,26 @@ export class SlamChessStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY
     });
 
-    const makeFn = (name: string, handler: string) => {
-      const fn = new lambda.Function(this, name, {
+    const makeFn = (name: string, entryFile: string) => {
+      const fn = new NodejsFunction(this, name, {
         runtime: lambda.Runtime.NODEJS_20_X,
-        code: lambda.Code.fromAsset('dist/src'),
-        handler,
+        entry: path.join(process.cwd(), entryFile),
+        handler: 'handler',
+        bundling: {
+          format: OutputFormat.CJS,
+          target: 'node20'
+        },
         environment: { GAME_TABLE_NAME: gameTable.tableName }
       });
       gameTable.grantReadWriteData(fn);
       return fn;
     };
 
-    const createGame = makeFn('CreateGameFn', 'backend/handlers/createGame.handler');
-    const getGame = makeFn('GetGameFn', 'backend/handlers/getGame.handler');
-    const submitMove = makeFn('SubmitMoveFn', 'backend/handlers/submitMove.handler');
-    const listHistory = makeFn('ListHistoryFn', 'backend/handlers/listHistory.handler');
-    const legalMoves = makeFn('LegalMovesFn', 'backend/handlers/legalMoves.handler');
+    const createGame = makeFn('CreateGameFn', 'src/backend/handlers/createGame.ts');
+    const getGame = makeFn('GetGameFn', 'src/backend/handlers/getGame.ts');
+    const submitMove = makeFn('SubmitMoveFn', 'src/backend/handlers/submitMove.ts');
+    const listHistory = makeFn('ListHistoryFn', 'src/backend/handlers/listHistory.ts');
+    const legalMoves = makeFn('LegalMovesFn', 'src/backend/handlers/legalMoves.ts');
 
     const api = new apigwv2.HttpApi(this, 'SlamChessApi');
     api.addRoutes({ path: '/games', methods: [apigwv2.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('CreateGameInt', createGame) });
