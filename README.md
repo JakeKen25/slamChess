@@ -73,9 +73,16 @@ The deploy outputs the API endpoint.
 ## API endpoints
 - `POST /games` Create game
 - `GET /games/{gameId}` Get game state
-- `POST /games/{gameId}/moves` Submit move body `{ "from": "E2", "to": "E4" }`
+- `POST /games/{gameId}/join` Join as white or black with body `{ "color": "white"|"black", "playerId"?: "client-id" }`
+- `POST /games/{gameId}/moves` Submit move body `{ "from": "E2", "to": "E4" }` and header `x-player-id`
 - `GET /games/{gameId}/history` List history/events
 - `GET /games/{gameId}/legal-moves` List legal moves for current turn
+
+## Multiplayer behavior
+- A game has two seats (`white`, `black`). Clients must claim a seat before moving.
+- Only the player ID assigned to the current turn can submit moves.
+- Move writes are version-checked to prevent simultaneous requests from corrupting state.
+- Web UI auto-refreshes every 1.5 seconds for near-real-time updates.
 
 ## DynamoDB schema
 Table `Games`:

@@ -5,7 +5,9 @@ function emptyState(turn: 'white' | 'black' = 'white'): GameState {
     board: {},
     turn,
     castlingRights: { whiteKingSide: false, whiteQueenSide: false, blackKingSide: false, blackQueenSide: false },
-    history: []
+    history: [],
+    players: {},
+    version: 0
   };
 }
 

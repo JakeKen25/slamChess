@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Color = 'white' | 'black';
 type PieceType = 'king' | 'queen' | 'rook' | 'bishop' | 'knight' | 'pawn';
@@ -20,6 +20,8 @@ type GameState = {
   board: Record<Square, Piece | undefined>;
   turn: Color;
   history: HistoryEntry[];
+  players: Partial<Record<Color, string>>;
+  version: number;
   gameOver?: { winner: Color; reason: 'checkmate' };
 };
 
@@ -107,14 +109,24 @@ function inferSlamFinal(events: GameEvent[]): AnimationState['slam'] {
 }
 
 export function App() {
+  const [playerId] = useState<string>(() => {
+    const existing = window.localStorage.getItem('slamChess.playerId');
+    if (existing) return existing;
+    const created = crypto.randomUUID();
+    window.localStorage.setItem('slamChess.playerId', created);
+    return created;
+  });
   const [gameId, setGameId] = useState<string>('');
   const [game, setGame] = useState<GameState | null>(null);
+  const [seat, setSeat] = useState<Color | null>(null);
   const [selected, setSelected] = useState<Square | null>(null);
   const [legalMoves, setLegalMoves] = useState<Record<Square, Square[]>>({});
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [animation, setAnimation] = useState<AnimationState>({});
   const [message, setMessage] = useState<string>('Create a game to begin.');
   const [loading, setLoading] = useState(false);
+
+  const myTurn = game && seat ? game.turn === seat : false;
 
   const destinationSet = useMemo(() => {
     if (!selected) return new Set<string>();
@@ -156,11 +168,20 @@ export function App() {
     setLegalMoves(nextLegal);
   }
 
+  useEffect(() => {
+    if (!gameId) return;
+    const timer = window.setInterval(() => {
+      void refresh(gameId);
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [gameId]);
+
   async function createGame() {
     setLoading(true);
     try {
       const response = await api<{ gameId: string; state: GameState }>('/games', { method: 'POST' });
       setGameId(response.gameId);
+      setSeat(null);
       setMessage(`Game ${response.gameId} created.`);
       setSelected(null);
       await refresh(response.gameId);
@@ -172,11 +193,12 @@ export function App() {
   }
 
   async function submitMove(from: Square, to: Square) {
-    if (!gameId) return;
+    if (!gameId || !myTurn) return;
     setLoading(true);
     try {
       const response = await api<{ state: GameState; events: GameEvent[] }>(`/games/${gameId}/moves`, {
         method: 'POST',
+        headers: { 'x-player-id': playerId },
         body: JSON.stringify({ from: from.toLowerCase(), to: to.toLowerCase() })
       });
       const movedEvent = response.events.find((event) => event.type === 'Moved');
@@ -199,8 +221,27 @@ export function App() {
     }
   }
 
+  async function joinSeat(color: Color) {
+    if (!gameId) return;
+    setLoading(true);
+    try {
+      const response = await api<{ state: GameState; color: Color }>(`/games/${gameId}/join`, {
+        method: 'POST',
+        body: JSON.stringify({ color, playerId })
+      });
+      setGame(response.state);
+      setSeat(response.color);
+      setMessage(`You joined as ${response.color.toUpperCase()}.`);
+      await refresh();
+    } catch (error) {
+      setMessage((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function onSquareClick(square: Square) {
-    if (!game) return;
+    if (!game || !myTurn) return;
     const piece = game.board[square];
 
     if (!selected) {
@@ -239,8 +280,15 @@ export function App() {
           <code>{gameId || 'No game id yet'}</code>
         </div>
 
+        <div className="controls">
+          <button disabled={!gameId || loading || seat === 'white'} onClick={() => void joinSeat('white')}>Join White</button>
+          <button disabled={!gameId || loading || seat === 'black'} onClick={() => void joinSeat('black')}>Join Black</button>
+          <span>You are: <strong>{seat?.toUpperCase() ?? 'SPECTATOR'}</strong></span>
+        </div>
+
         <div className="status-row">
           <div>Side to move: <strong>{game?.turn.toUpperCase() ?? '-'}</strong></div>
+          <div>{seat ? (myTurn ? 'Your turn' : 'Waiting for opponent') : 'Join a seat to play'}</div>
           {checkBanner ? <div className="banner">{checkBanner}</div> : null}
           {game?.gameOver ? <div className="banner mate">Game over ({game.gameOver.reason})</div> : null}
         </div>
