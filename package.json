@@ -8,8 +8,8 @@
     "test": "jest --runInBand",
     "test:unit": "jest --runInBand test/engine",
     "test:integration": "jest --runInBand test/api",
-    "cdk:synth": "cdk synth",
-    "cdk:deploy": "cdk deploy",
+    "cdk:synth": "npm run build && cdk synth --app \"node dist/infra/bin/deploy.js\"",
+    "cdk:deploy": "npm run build && cdk deploy --app \"node dist/infra/bin/deploy.js\"",
     "web:dev": "npm run dev --workspace @slamchess/web",
     "web:build": "npm run build --workspace @slamchess/web"
   },
@@ -28,7 +28,8 @@
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "esbuild": "^0.21.5"
   },
   "workspaces": [
     "apps/*"
