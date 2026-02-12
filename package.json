@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/prepare-lambda.mjs",
     "test": "jest --runInBand",
     "test:unit": "jest --runInBand test/engine",
     "test:integration": "jest --runInBand test/api",
