@@ -28,6 +28,16 @@ function isIllegalMoveError(error: unknown): boolean {
   return ['No piece on source square', 'Not your turn', 'Illegal move', 'Game is over'].includes(error.message);
 }
 
+function isConditionalCheckFailed(error: unknown): boolean {
+  return error instanceof Error && error.name === 'ConditionalCheckFailedException';
+}
+
+function headerValue(event: APIGatewayProxyEventV2, key: string): string | undefined {
+  const direct = event.headers[key];
+  if (typeof direct === 'string') return direct;
+  return event.headers[key.toLowerCase()];
+}
+
 export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) {
   return {
     createGame: async () => {
@@ -71,7 +81,10 @@ export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) 
 
       try {
         await repo.save(gameId, nextState, state.version);
-      } catch {
+      } catch (error) {
+        if (!isConditionalCheckFailed(error)) {
+          return json(500, { error: 'Internal server error' });
+        }
         return json(409, { error: 'Game was updated by another request. Please retry join.' });
       }
       return json(200, { gameId, state: nextState, playerId, color: parsedBody.color });
@@ -98,7 +111,7 @@ export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) 
 
       if (!isMove(parsedBody)) return json(400, { error: 'Invalid move shape' });
 
-      const playerId = event.headers['x-player-id'];
+      const playerId = headerValue(event, 'x-player-id');
       if (typeof playerId !== 'string' || !playerId.trim()) {
         return json(401, { error: 'x-player-id header required' });
       }
@@ -115,7 +128,7 @@ export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) 
         await repo.save(gameId, newState, current.version);
         return json(200, { gameId, state: newState, events });
       } catch (error) {
-        if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+        if (isConditionalCheckFailed(error)) {
           return json(409, { error: 'Game updated by another request. Refresh and retry.' });
         }
         if (isIllegalMoveError(error)) {

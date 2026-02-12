@@ -9,10 +9,13 @@ export class SlamChessStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const destroyOnRemoval = this.node.tryGetContext('destroyOnRemoval') === 'true';
+
     const gameTable = new dynamodb.Table(this, 'Games', {
       partitionKey: { name: 'gameId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      removalPolicy: cdk.RemovalPolicy.DESTROY
+      pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
+      removalPolicy: destroyOnRemoval ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN
     });
 
     const makeFn = (name: string, handler: string) => {
@@ -33,7 +36,13 @@ export class SlamChessStack extends cdk.Stack {
     const listHistory = makeFn('ListHistoryFn', 'backend/handlers/listHistory.handler');
     const legalMoves = makeFn('LegalMovesFn', 'backend/handlers/legalMoves.handler');
 
-    const api = new apigwv2.HttpApi(this, 'SlamChessApi');
+    const api = new apigwv2.HttpApi(this, 'SlamChessApi', {
+      corsPreflight: {
+        allowHeaders: ['content-type', 'x-player-id'],
+        allowMethods: [apigwv2.CorsHttpMethod.ANY],
+        allowOrigins: ['*']
+      }
+    });
     api.addRoutes({ path: '/games', methods: [apigwv2.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('CreateGameInt', createGame) });
     api.addRoutes({ path: '/games/{gameId}', methods: [apigwv2.HttpMethod.GET], integration: new integrations.HttpLambdaIntegration('GetGameInt', getGame) });
     api.addRoutes({ path: '/games/{gameId}/moves', methods: [apigwv2.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('SubmitMoveInt', submitMove) });

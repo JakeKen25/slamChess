@@ -70,6 +70,13 @@ npm run cdk:deploy
 
 The deploy outputs the API endpoint.
 
+Detailed deployment + operations runbook:
+- `docs/aws-setup-guide.md`
+
+Deployment note:
+- DynamoDB defaults to `RETAIN` on stack deletion for safer production operations.
+- For ephemeral environments where table teardown is desired, deploy with CDK context `-c destroyOnRemoval=true`.
+
 ## API endpoints
 - `POST /games` Create game
 - `GET /games/{gameId}` Get game state
