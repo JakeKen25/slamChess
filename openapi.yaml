@@ -136,6 +136,12 @@ paths:
       summary: Submit move
       parameters:
         - $ref: '#/components/parameters/GameId'
+        - name: x-player-id
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Player identity token that must match the currently active seat.
       requestBody:
         required: true
         content:
@@ -294,6 +300,29 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /games/{gameId}/join:
+    post:
+      summary: Claim a white or black player seat for a game
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [color]
+              properties:
+                color:
+                  type: string
+                  enum: [white, black]
+                playerId:
+                  type: string
+      responses:
+        '200':
+          description: Seat assigned to player
+        '409':
+          description: Seat is already taken
   /games/{gameId}/history:
     get:
       summary: List move history

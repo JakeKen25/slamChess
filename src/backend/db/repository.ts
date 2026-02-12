@@ -17,7 +17,19 @@ export class GameRepository {
     return res.Item?.state as GameState | undefined;
   }
 
-  async save(gameId: string, state: GameState): Promise<void> {
+  async save(gameId: string, state: GameState, expectedVersion?: number): Promise<void> {
+    if (typeof expectedVersion === 'number') {
+      await this.db.send(new UpdateCommand({
+        TableName: this.tableName,
+        Key: { gameId },
+        UpdateExpression: 'SET #s = :s',
+        ConditionExpression: '#s.#v = :expectedVersion',
+        ExpressionAttributeNames: { '#s': 'state', '#v': 'version' },
+        ExpressionAttributeValues: { ':s': state, ':expectedVersion': expectedVersion }
+      }));
+      return;
+    }
+
     await this.db.send(new UpdateCommand({
       TableName: this.tableName,
       Key: { gameId },

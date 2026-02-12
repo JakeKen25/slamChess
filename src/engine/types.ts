@@ -30,6 +30,8 @@ export interface GameState {
   turn: Color;
   castlingRights: CastlingRights;
   history: HistoryEntry[];
+  players: Partial<Record<Color, string>>;
+  version: number;
   gameOver?: { winner: Color; reason: 'checkmate' };
 }
 

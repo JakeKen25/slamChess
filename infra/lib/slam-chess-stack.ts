@@ -29,6 +29,7 @@ export class SlamChessStack extends cdk.Stack {
     const createGame = makeFn('CreateGameFn', 'backend/handlers/createGame.handler');
     const getGame = makeFn('GetGameFn', 'backend/handlers/getGame.handler');
     const submitMove = makeFn('SubmitMoveFn', 'backend/handlers/submitMove.handler');
+    const joinGame = makeFn('JoinGameFn', 'backend/handlers/joinGame.handler');
     const listHistory = makeFn('ListHistoryFn', 'backend/handlers/listHistory.handler');
     const legalMoves = makeFn('LegalMovesFn', 'backend/handlers/legalMoves.handler');
 
@@ -36,6 +37,7 @@ export class SlamChessStack extends cdk.Stack {
     api.addRoutes({ path: '/games', methods: [apigwv2.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('CreateGameInt', createGame) });
     api.addRoutes({ path: '/games/{gameId}', methods: [apigwv2.HttpMethod.GET], integration: new integrations.HttpLambdaIntegration('GetGameInt', getGame) });
     api.addRoutes({ path: '/games/{gameId}/moves', methods: [apigwv2.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('SubmitMoveInt', submitMove) });
+    api.addRoutes({ path: '/games/{gameId}/join', methods: [apigwv2.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('JoinGameInt', joinGame) });
     api.addRoutes({ path: '/games/{gameId}/history', methods: [apigwv2.HttpMethod.GET], integration: new integrations.HttpLambdaIntegration('HistoryInt', listHistory) });
     api.addRoutes({ path: '/games/{gameId}/legal-moves', methods: [apigwv2.HttpMethod.GET], integration: new integrations.HttpLambdaIntegration('LegalMovesInt', legalMoves) });
 
