@@ -264,6 +264,10 @@ export function applyMove(gameState: GameState, move: Move): { newState: GameSta
       state.gameOver = { winner, reason: 'checkmate' };
     }
   }
-  const finalState = { ...state, history: [...state.history, { move, events }] };
+  const finalState = {
+    ...state,
+    history: [...state.history, { move, events }],
+    version: (gameState.version ?? 0) + 1
+  };
   return { newState: finalState, events };
 }

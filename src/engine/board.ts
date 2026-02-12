@@ -43,7 +43,9 @@ export function initialState(): GameState {
       blackKingSide: true,
       blackQueenSide: true
     },
-    history: []
+    history: [],
+    players: {},
+    version: 0
   };
 }
 

@@ -1,197 +1,244 @@
-# Slam Chess on AWS: CloudShell-Only Setup Guide
+# Slam Chess on AWS: Full Deployment & Operations Guide
 
-This guide is for novice users and uses **AWS CloudShell for all shell-based configuration actions**.
+This guide walks through deploying **both backend API and multiplayer-ready web client** on AWS with minimal operational overhead.
 
-> Scope rule for this guide: any command-line setup/config/deploy command is run in CloudShell.
+It includes:
+- Backend deploy (API Gateway + Lambda + DynamoDB via CDK)
+- Frontend deploy (S3 + CloudFront)
+- Multiplayer seat flow (`/join`, `x-player-id`)
+- Validation and troubleshooting
 
 ---
 
-## 1) What this deploy creates
+## 1) Architecture (what gets deployed)
 
-The CDK stack deploys:
+### Backend stack (CDK in this repo)
+- **DynamoDB** table `Games` (`gameId` PK)
+- **Lambda** handlers for:
+  - `POST /games`
+  - `POST /games/{gameId}/join`
+  - `GET /games/{gameId}`
+  - `POST /games/{gameId}/moves`
+  - `GET /games/{gameId}/history`
+  - `GET /games/{gameId}/legal-moves`
+- **API Gateway HTTP API** (with CORS for `content-type` and `x-player-id`)
 
-- Amazon DynamoDB table (`Games`) for state storage
-- AWS Lambda handlers for game actions
-- Amazon API Gateway HTTP API routes
-
-At the end, you get an `ApiEndpoint` URL.
+### Frontend hosting (recommended low-overhead)
+- Build static web app from `apps/web`
+- Host in **S3**
+- Serve via **CloudFront**
 
 ---
 
 ## 2) Prerequisites
 
-- AWS account with permissions for CloudFormation, IAM, Lambda, API Gateway, and DynamoDB.
-- Access to **AWS Console + CloudShell** in your target region.
-- GitHub access to clone the repo.
+- AWS account + permissions for CloudFormation, IAM, Lambda, API Gateway, DynamoDB, S3, CloudFront.
+- Node.js 20+ and npm.
+- AWS CLI configured (`aws configure`) or CloudShell.
 
-No local AWS CLI configuration is required for setup/deploy in this workflow.
-
----
-
-## 3) Open CloudShell in correct region
-
-1. Sign in to AWS Console.
-2. Choose target region (example: `us-east-2`).
-3. Open **CloudShell**.
-
-Verify tools:
-
-```bash
-aws --version
-node --version
-npm --version
-git --version
-```
+Optional but recommended:
+- Dedicated AWS profile for this project.
+- Separate AWS account/environment for dev vs prod.
 
 ---
 
-## 4) Clone and install (CloudShell)
+## 3) Clone, install, test, and build
 
 ```bash
 git clone https://github.com/JakeKen25/slamChess
 cd slamChess
 npm install
+npm run test:integration
+npm run build
+npm run web:build
 ```
 
-Confirm caller identity:
-
-```bash
-aws sts get-caller-identity
-```
+Notes:
+- `npm run test:integration` validates API handler behavior for multiplayer join/turn checks.
+- `npm run build` compiles backend and CDK app artifacts.
 
 ---
 
-## 5) Build and bootstrap
-
-Build first (required):
-
-```bash
-npm run build
-```
-
-Bootstrap using compiled CDK app entrypoint:
+## 4) Bootstrap CDK
 
 ```bash
 npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
 ```
 
+If using an AWS profile:
+
+```bash
+AWS_PROFILE=<profile> npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
+```
+
 ---
 
-## 6) Deploy from CloudShell
+## 5) Deploy backend stack
+
+### Default safe mode (recommended)
+By default, DynamoDB table uses:
+- `RETAIN` removal policy (protects data on stack delete)
+- Point-in-time recovery enabled
+
+Deploy:
 
 ```bash
 npm run cdk:deploy
 ```
 
-When prompted for security-sensitive changes, type `y`.
+### Ephemeral/dev teardown mode (optional)
+If you want stack destroy to also delete DynamoDB table:
 
-On success, copy:
+```bash
+npx cdk deploy --app "node dist/infra/bin/deploy.js" -c destroyOnRemoval=true
+```
 
+---
+
+## 6) Capture API endpoint
+
+After deploy, copy output:
 - `SlamChessStack.ApiEndpoint`
 
-Example format:
+Set env var:
 
-```text
-https://abc123xyz.execute-api.us-east-2.amazonaws.com/
+```bash
+export API_BASE_URL="https://<api-id>.execute-api.<region>.amazonaws.com"
+```
+
+(Do not append trailing slash.)
+
+---
+
+## 7) Validate multiplayer API flow
+
+### 7.1 Create game
+
+```bash
+curl -s -X POST "$API_BASE_URL/games" -H "content-type: application/json"
+```
+
+Capture `gameId`.
+
+### 7.2 Join white and black seats
+
+```bash
+curl -s -X POST "$API_BASE_URL/games/<gameId>/join" \
+  -H "content-type: application/json" \
+  -d '{"color":"white","playerId":"player-white"}'
+
+curl -s -X POST "$API_BASE_URL/games/<gameId>/join" \
+  -H "content-type: application/json" \
+  -d '{"color":"black","playerId":"player-black"}'
+```
+
+### 7.3 Submit move as current-turn player only
+
+```bash
+curl -s -X POST "$API_BASE_URL/games/<gameId>/moves" \
+  -H "content-type: application/json" \
+  -H "x-player-id: player-white" \
+  -d '{"from":"e2","to":"e4"}'
+```
+
+If wrong player moves, backend returns `403`.
+
+### 7.4 Read state/history/legal moves
+
+```bash
+curl -s "$API_BASE_URL/games/<gameId>"
+curl -s "$API_BASE_URL/games/<gameId>/history"
+curl -s "$API_BASE_URL/games/<gameId>/legal-moves"
 ```
 
 ---
 
-## 7) Verify API from CloudShell
+## 8) Frontend deployment (S3 + CloudFront)
 
-Set endpoint from deployment output:
-
-```bash
-export API_BASE_URL="https://<api-id>.execute-api.<region>.amazonaws.com/"
-```
-
-Create game:
+Build frontend with your deployed API endpoint:
 
 ```bash
-curl -i -X POST "$API_BASE_URL/games" -H "content-type: application/json"
+VITE_API_BASE_URL="$API_BASE_URL" npm run web:build
 ```
 
-From JSON response, copy `gameId` (UUID-like), then test:
+Create S3 bucket (example):
 
 ```bash
-curl -i "$API_BASE_URL/games/<gameId>"
-curl -i -X POST "$API_BASE_URL/games/<gameId>/moves" -H "content-type: application/json" -d '{"from":"e2","to":"e4"}'
-curl -i "$API_BASE_URL/games/<gameId>/history"
-curl -i "$API_BASE_URL/games/<gameId>/legal-moves"
+aws s3 mb s3://slamchess-web-<unique-suffix>
 ```
+
+Upload static files:
+
+```bash
+aws s3 sync apps/web/dist s3://slamchess-web-<unique-suffix> --delete
+```
+
+Create CloudFront distribution (console is easiest):
+1. Origin = S3 bucket.
+2. Default root object = `index.html`.
+3. Enable HTTPS.
+4. Add custom error responses for SPA routing:
+   - 403 -> `/index.html` (200)
+   - 404 -> `/index.html` (200)
+
+After CloudFront deploys, open the distribution domain and play from two browser sessions.
 
 ---
 
-## 8) Play the game UI
+## 9) Multiplayer behavior in production
 
-The game UI is React/Vite (`apps/web`).
-
-If running the dev server from CloudShell:
-
-```bash
-VITE_API_BASE_URL="$API_BASE_URL" npm run web:dev -- --host 0.0.0.0
-```
-
-Then open CloudShell port preview for `5173` and use the board:
-
-- Click **New game**
-- Click a piece to select
-- Click a highlighted destination square to move
-- Use **Refresh state** when needed
+- Each browser session stores its own `playerId` in local storage.
+- Player must claim a seat via **Join White** / **Join Black**.
+- Only player bound to current turn can move.
+- UI auto-refreshes every 1.5s to provide near-real-time synchronization.
+- Backend uses optimistic concurrency (`version`) to reject stale concurrent writes.
 
 ---
 
-## 9) Known CloudShell issues and fixes
+## 10) Minimal-overhead AWS operating guidance
 
-### A) `ERR_UNKNOWN_FILE_EXTENSION` for `infra/bin/deploy.ts`
-Use compiled app entrypoint:
+- Use one stack per environment: `slamchess-dev`, `slamchess-prod`.
+- Keep Lambda runtime at Node.js 20.x.
+- Use PAY_PER_REQUEST DynamoDB (already configured).
+- Keep CloudFront caching on static assets; invalidate only when needed.
+- Prefer API Gateway + Lambda logs in CloudWatch for debugging; no extra services needed.
+
+---
+
+## 11) Troubleshooting
+
+### CORS errors in browser
+- Ensure requests include only allowed headers (`content-type`, `x-player-id`).
+- Confirm frontend is calling correct `VITE_API_BASE_URL`.
+
+### `x-player-id header required`
+- Client must include `x-player-id` for `/moves`.
+
+### `No white/black player has joined yet`
+- Claim seat first via `/join`.
+
+### `Only the <color> player may move`
+- Wrong seat is attempting current turn move.
+
+### `Game updated by another request`
+- Expected under simultaneous moves; refresh and retry.
+
+### CDK deploy fails with TypeScript entrypoint errors
+- Always build first and deploy compiled app:
 
 ```bash
 npm run build
-npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
-npm run cdk:deploy
+npx cdk deploy --app "node dist/infra/bin/deploy.js"
 ```
-
-### B) API returns 500 with `Cannot use import statement outside a module`
-Update to latest repo and redeploy:
-
-```bash
-git pull
-npm install
-npm run cdk:deploy
-```
-
-Then re-test `POST /games` with `curl -i`.
-
-### C) Wrong API base URL
-Use `ApiEndpoint` from stack output, not account ID-based URL.
-
-### D) 404 with `/games/1`
-`gameId` is generated UUID-like string from `POST /games`; it is not numeric.
 
 ---
 
-## 10) Cleanup to avoid charges
+## 12) Cleanup
 
-Destroy resources from CloudShell when done:
+Destroy stack:
 
 ```bash
 npx cdk destroy --app "node dist/infra/bin/deploy.js"
 ```
 
----
-
-## 11) CloudShell-only quick runbook
-
-```bash
-git clone https://github.com/JakeKen25/slamChess
-cd slamChess
-npm install
-npm run build
-npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
-npm run cdk:deploy
-export API_BASE_URL="<ApiEndpoint>"
-curl -i -X POST "$API_BASE_URL/games" -H "content-type: application/json"
-VITE_API_BASE_URL="$API_BASE_URL" npm run web:dev -- --host 0.0.0.0
-```
-
+If deployed with default (safe) retention, DynamoDB table remains and must be removed manually when no longer needed.
