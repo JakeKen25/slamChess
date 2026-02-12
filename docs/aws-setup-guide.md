@@ -79,11 +79,18 @@ npx cdk bootstrap --app "node dist/infra/bin/deploy.js"
 
 ## 6) Deploy from CloudShell
 
+Run deployment in verbose mode so failures are visible:
+
 ```bash
-npm run cdk:deploy
+npm run cdk:deploy -- --require-approval never --verbose
 ```
 
-When prompted for security-sensitive changes, type `y`.
+If deployment fails, synthesize the template and retry:
+
+```bash
+npm run cdk:synth
+npm run cdk:deploy -- --require-approval never
+```
 
 On success, copy:
 
@@ -141,7 +148,32 @@ Then open CloudShell port preview for `5173` and use the board:
 
 ---
 
-## 9) Known CloudShell issues and fixes
+## 9) View CloudWatch logs (Lambda + API access)
+
+This stack now writes:
+
+- Lambda structured JSON logs (game lifecycle + move outcomes)
+- HTTP API access logs for every request
+
+From CloudShell, tail logs:
+
+```bash
+aws logs tail /aws/lambda/SlamChessStack-CreateGameFn --follow
+aws logs tail /aws/lambda/SlamChessStack-SubmitMoveFn --follow
+```
+
+Find API access log group name and tail it:
+
+```bash
+aws logs describe-log-groups --log-group-name-prefix "/aws/vendedlogs/apis"
+aws logs tail <api-access-log-group-name> --follow
+```
+
+Tip: run a `curl` request from section 7 while tailing to verify log flow.
+
+---
+
+## 10) Known CloudShell issues and fixes
 
 ### A) `ERR_UNKNOWN_FILE_EXTENSION` for `infra/bin/deploy.ts`
 Use compiled app entrypoint:
@@ -171,7 +203,7 @@ Use `ApiEndpoint` from stack output, not account ID-based URL.
 
 ---
 
-## 10) Cleanup to avoid charges
+## 11) Cleanup to avoid charges
 
 Destroy resources from CloudShell when done:
 
@@ -181,7 +213,7 @@ npx cdk destroy --app "node dist/infra/bin/deploy.js"
 
 ---
 
-## 11) CloudShell-only quick runbook
+## 12) CloudShell-only quick runbook
 
 ```bash
 git clone https://github.com/JakeKen25/slamChess

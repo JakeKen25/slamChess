@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid';
 import { applyMove, initialState, listLegalMoves } from '../../engine/index.js';
 import { Color } from '../../engine/types.js';
 import { GameRepository } from '../db/repository.js';
+import { logger } from '../logging/logger.js';
 
 function json(statusCode: number, body: unknown): APIGatewayProxyResult {
   return { statusCode, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
@@ -34,6 +35,7 @@ export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) 
       const gameId = uuid();
       const state = initialState();
       await repo.create(gameId, state);
+      logger.info('Game created', { gameId, version: state.version });
       return json(201, { gameId, state });
     },
     joinGame: async (event: APIGatewayProxyEventV2) => {
@@ -56,6 +58,7 @@ export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) 
       const playerId = parsedBody.playerId?.trim() || uuid();
       const existing = state.players[parsedBody.color];
       if (existing && existing !== playerId) {
+        logger.warn('Seat join rejected because seat is occupied', { gameId, color: parsedBody.color, requestedPlayerId: playerId });
         return json(409, { error: `Seat ${parsedBody.color} already taken` });
       }
 
@@ -72,8 +75,10 @@ export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) 
       try {
         await repo.save(gameId, nextState, state.version);
       } catch {
+        logger.warn('Concurrent join conflict', { gameId, color: parsedBody.color, playerId });
         return json(409, { error: 'Game was updated by another request. Please retry join.' });
       }
+      logger.info('Player joined game', { gameId, color: parsedBody.color, playerId, version: nextState.version });
       return json(200, { gameId, state: nextState, playerId, color: parsedBody.color });
     },
     getGame: async (event: APIGatewayProxyEventV2) => {
@@ -113,14 +118,35 @@ export function handlers(repo: Pick<GameRepository, 'create' | 'get' | 'save'>) 
       try {
         const { newState, events } = applyMove(current, parsedBody);
         await repo.save(gameId, newState, current.version);
+        logger.info('Move submitted', {
+          gameId,
+          playerId: playerId.trim(),
+          from: parsedBody.from,
+          to: parsedBody.to,
+          nextTurn: newState.turn,
+          version: newState.version
+        });
         return json(200, { gameId, state: newState, events });
       } catch (error) {
         if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+          logger.warn('Move save conflict', { gameId, playerId: playerId.trim() });
           return json(409, { error: 'Game updated by another request. Refresh and retry.' });
         }
         if (isIllegalMoveError(error)) {
+          logger.warn('Illegal move rejected', {
+            gameId,
+            playerId: playerId.trim(),
+            from: parsedBody.from,
+            to: parsedBody.to,
+            reason: (error as Error).message
+          });
           return json(409, { error: (error as Error).message });
         }
+        logger.error('Unexpected move handler error', {
+          gameId,
+          playerId: playerId.trim(),
+          error: error instanceof Error ? error.message : String(error)
+        });
         return json(500, { error: 'Internal server error' });
       }
     },
