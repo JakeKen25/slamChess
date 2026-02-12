@@ -7,6 +7,7 @@ Tournament-ready chess-inspired game backend with deterministic slam mechanics.
 - Slam mechanics for rook/bishop/queen/pawn/knight/king attacks
 - Self-check prevention, check/checkmate, castling support
 - AWS backend: API Gateway + Lambda + DynamoDB
+- CloudWatch logging: API access logs + structured Lambda logs
 - IaC with AWS CDK
 - Unit tests for rule edge cases + integration tests for API handlers
 
@@ -68,7 +69,7 @@ npm run cdk:synth
 npm run cdk:deploy
 ```
 
-The deploy outputs the API endpoint.
+The deploy outputs the API endpoint. Lambda and API Gateway access logs are sent to CloudWatch with 1-week retention by default.
 
 ## API endpoints
 - `POST /games` Create game
